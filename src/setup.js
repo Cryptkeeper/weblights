@@ -20,9 +20,9 @@ export function CompatibleBrowserTest() {
 }
 
 export function SelectSerialPort() {
-  function handleDisconnectedSerialPort() {
+  const handleDisconnectedSerialPort = () => {
     render(DisconnectedSerialPort(), AppElement);
-  }
+  };
 
   async function openSerialPort() {
     try {
@@ -110,7 +110,7 @@ export function TestConnection({ serialPort }) {
 }
 
 function ActiveConnection({ io, connectedUnits }) {
-  async function closeSerialPort() {
+  const closeSerialPort = async () => {
     try {
       await io.close();
     } catch (ex) {
@@ -118,7 +118,7 @@ function ActiveConnection({ io, connectedUnits }) {
     } finally {
       render(SelectSerialPort(), AppElement);
     }
-  }
+  };
 
   return (
     <div>
