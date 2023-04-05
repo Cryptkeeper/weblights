@@ -4,10 +4,12 @@ import { ErrorMessage } from "./error";
 import { Poller } from "./poller";
 import { LorIO } from "./lorio";
 import { Heartbeat } from "./heartbeat";
+import { SequenceReader } from "./sequence";
 
 export function CompatibleBrowserTest() {
   if ("serial" in navigator) {
-    return SelectSerialPort();
+    //return SelectSerialPort();
+    return <OpenSequence />;
   } else {
     return (
       <p>
@@ -81,6 +83,98 @@ export function DisconnectedSerialPort() {
       >
         Select New Serial Port
       </button>
+    </div>
+  );
+}
+
+export function OpenSequence() {
+  const handleFileSelected = (event) => {
+    if (event.target.files.length === 0) {
+      return;
+    }
+
+    event.target.disabled = true;
+
+    const file = event.target.files[0];
+
+    const fileReader = new FileReader();
+
+    fileReader.onload = async (event) => {
+      const sequenceReader = new SequenceReader(
+        new DataView(event.target.result)
+      );
+
+      if (sequenceReader.isValidMagic()) {
+        render(<SequenceInfo sequenceReader={sequenceReader} />, AppElement);
+      } else {
+        render(
+          <ErrorMessage
+            error={new Error("invalid file format magic sequence")}
+          />,
+          AppElement
+        );
+      }
+    };
+
+    fileReader.onerror = async (error) => {
+      render(<ErrorMessage error={error} />, AppElement);
+    };
+
+    fileReader.readAsArrayBuffer(file);
+  };
+
+  // TODO: allow multiple upload in the future?
+  return (
+    <div>
+      <input
+        class="form-control"
+        type="file"
+        accept=".fseq"
+        onchange={handleFileSelected}
+        multiple={false}
+      />
+    </div>
+  );
+}
+
+export function SequenceInfo({ sequenceReader }) {
+  const duration = sequenceReader.getDuration();
+
+  return (
+    <div>
+      <strong>Sequence Info</strong>
+      <ul>
+        <li>FSEQ version {sequenceReader.getVersion()}</li>
+        <li>Channel count: {sequenceReader.getChannelCount()}</li>
+        <li>
+          {duration.frameCount} frames @ {duration.stepTimeMillis}ms step time
+        </li>
+        <li>
+          {Math.round(duration.durationMillis / 1000)} seconds total duration
+        </li>
+      </ul>
+      {sequenceReader.isCompressed() ? (
+        <div>
+          <div class="alert alert-danger">
+            Sequence is compressed, and must be decompressed before it can be
+            used with weblights as we have not added support for decompressing
+            the file in the browser (yet).
+          </div>
+          <button
+            type="button"
+            class="btn-link"
+            onclick={() => render(<OpenSequence />, AppElement)}
+          >
+            Select a different sequence
+          </button>
+        </div>
+      ) : (
+        <div>
+          <button type="button" class="btn-success">
+            Play Sequence
+          </button>
+        </div>
+      )}
     </div>
   );
 }
